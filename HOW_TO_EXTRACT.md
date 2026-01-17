@@ -1,6 +1,6 @@
 # How to Extract Marks from PDF
 
-This guide explains how to use the `update_marks.py` script to extract marks from a PDF file and update the `28.html` marksheet.
+This guide explains how to use the `update_marks.py` script to extract marks from a PDF file and update the `new_data.js` data file.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide explains how to use the `update_marks.py` script to extract marks fro
 
 ## Files
 
--   `28.html`: The main marksheet file (database).
+-   `new_data.js`: The JavaScript file containing the student data (marks DB).
 -   `update_marks.py`: The Python script that performs the extraction and update.
 -   `Your_PDF_File.pdf`: The source PDF containing student results.
 
@@ -48,7 +48,7 @@ python update_marks.py Marksheet_SY4.pdf fsd
 1.  The script reads the PDF and looks for a table with Enrollment Numbers and Marks.
 2.  It extracts the mark (validating 'AB' as 0).
 3.  It divides the extracted mark by **2**.
-4.  It adds this value to the *existing* mark in `28.html` for that specific subject.
-5.  It saves the updated data back to `28.html`.
+4.  It adds this value to the *existing* mark in `new_data.js` for that specific subject.
+5.  It saves the updated data back to `new_data.js`.
 
 > **Note:** The script assumes the PDF table format has the Enrollment Number in the 3rd column (index 2) and Marks in the 8th column (index 7).
