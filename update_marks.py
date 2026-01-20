@@ -29,12 +29,15 @@ def extract_marks_from_pdf(pdf_path):
             tables = page.extract_tables()
             for table in tables:
                 for row in table:
-                    if not row or len(row) < 8: continue
+                    # Check for valid row length (at least 9 columns for this PDF)
+                    # We look for Name at index 6 and Marks at index 8
+                    if not row or len(row) < 9: continue
                     
-                    enrollment = str(row[2]).strip()
-                    mark_str = str(row[7]).strip()
+                    name = str(row[6]).strip().upper()
+                    mark_str = str(row[8]).strip()
                     
-                    if len(enrollment) < 10: 
+                    # Basic validation: Name should be reasonable length
+                    if len(name) < 3 or name == "NAME": 
                         continue
                         
                     mark_str_clean = mark_str.replace('\n', ' ').strip().upper()
@@ -51,9 +54,9 @@ def extract_marks_from_pdf(pdf_path):
                             if match:
                                 mark = float(match.group(0))
                             else:
-                                mark = 0.0
+                                continue # Skip header or invalid rows
                     
-                    marks_map[enrollment] = mark
+                    marks_map[name] = mark
     
     print(f"Extracted marks for {len(marks_map)} students.")
     print(f"Found {count_ab} students marked 'AB' (Absent).")
@@ -97,15 +100,23 @@ def update_js_data(target_subject, marks_map):
         return
 
     updated_count = 0
+    updated_count = 0
+    
+    # Check for duplicate names in JS data to ensure safety
+    all_names = [s.get('name', '').strip().upper() for s in data if 'name' in s]
+    if len(all_names) != len(set(all_names)):
+        print("WARNING: Duplicate names found in new_data.js. Name matching might be ambiguous.")
+
     for student in data:
-        enrollment = str(student.get('enrollment', ''))
+        # Match by Name
+        name = str(student.get('name', '')).strip().upper()
         
         # Ensure target key exists
         if target_subject not in student:
             student[target_subject] = 0.0
 
-        if enrollment in marks_map:
-            pdf_mark = marks_map[enrollment]
+        if name in marks_map:
+            pdf_mark = marks_map[name]
             
             # Logic: New = Old + (PDF / 2)
             old_val = float(student.get(target_subject, 0))
