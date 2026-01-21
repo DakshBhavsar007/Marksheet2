@@ -668,6 +668,7 @@
                             <th onclick="sortTable('fsd')">FSD-I</th>
                             <th onclick="sortTable('fcsp')">FCSP-I</th>
                             <th onclick="sortTable('de')">DE</th>
+                            <th onclick="sortTable('etc')">ETC</th>
                             <th onclick="sortTable('total')">Total</th>
                         </tr>
                     </thead>
@@ -704,7 +705,8 @@
         let gradeChart = null;
 
         const allData = data.map((s, i) => {
-            s.total = s.ps + s.fsd + s.fcsp + s.de;
+            s.etc = 0;
+            s.total = s.ps + s.fsd + s.fcsp + s.de + s.etc;
             return s;
         }).sort((a, b) => b.total - a.total).map((s, i) => ({ ...s, rank: i + 1 }));
 
@@ -819,6 +821,7 @@
                     <td>${s.fsd}</td>
                     <td>${s.fcsp}</td>
                     <td>${s.de}</td>
+                    <td>${s.etc}</td>
                     <td><span class="cell-total">${s.total}</span></td>
                 `;
                 tbody.appendChild(tr);
@@ -843,7 +846,7 @@
 
             if (gradeChart) gradeChart.destroy();
 
-            const subjects = ['PS', 'FSD', 'FCSP', 'DE'];
+            const subjects = ['PS', 'FSD', 'FCSP', 'DE', 'ETC'];
             const avgs = subjects.map(sub => {
                 const sum = filteredData.reduce((acc, s) => acc + s[sub.toLowerCase()], 0);
                 return (sum / filteredData.length).toFixed(1);
@@ -852,11 +855,11 @@
             gradeChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Prob. & Stats', 'Full Stack Dev', 'FCSP / Python', 'Digital Elec.'],
+                    labels: ['Prob. & Stats', 'Full Stack Dev', 'FCSP / Python', 'Digital Elec.', 'ETC'],
                     datasets: [{
                         label: 'Avg Score',
                         data: avgs,
-                        backgroundColor: ['rgba(108, 92, 231, 0.7)', 'rgba(0, 206, 201, 0.7)', 'rgba(232, 67, 147, 0.7)', 'rgba(253, 203, 110, 0.7)'],
+                        backgroundColor: ['rgba(108, 92, 231, 0.7)', 'rgba(0, 206, 201, 0.7)', 'rgba(232, 67, 147, 0.7)', 'rgba(253, 203, 110, 0.7)', 'rgba(100, 100, 100, 0.7)'],
                         borderRadius: 8,
                         barThickness: 40
                     }]
@@ -898,10 +901,10 @@
         }
 
         function exportCSV() {
-            let csv = 'Rank,Roll No,Division,Branch,Enrollment,Name,Mentor,PS,FSD,FCSP,DE,Total\n';
+            let csv = 'Rank,Roll No,Division,Branch,Enrollment,Name,Mentor,PS,FSD,FCSP,DE,ETC,Total\n';
             filteredData.forEach(s => {
                 const { roll, div } = getStudentModeData(s);
-                csv += `${s.rank},${roll},${div},${s.branch},${s.enrollment},"${s.name}",${s.mentor},${s.ps},${s.fsd},${s.fcsp},${s.de},${s.total}\n`;
+                csv += `${s.rank},${roll},${div},${s.branch},${s.enrollment},"${s.name}",${s.mentor},${s.ps},${s.fsd},${s.fcsp},${s.de},${s.etc},${s.total}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const Link = document.createElement('a');
