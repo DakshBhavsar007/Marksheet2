@@ -13,7 +13,8 @@ SUBJECT_MAP = {
     "fsd": "fsd",
     "de": "de",
     "python": "fcsp", 
-    "fcsp": "fcsp"
+    "fcsp": "fcsp",
+    "etc": "etc"
 }
 
 def extract_marks_from_pdf(pdf_path):

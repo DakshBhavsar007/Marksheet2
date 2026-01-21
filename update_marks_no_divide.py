@@ -119,10 +119,9 @@ def update_js_data(target_subject, marks_map):
         if name in marks_map:
             pdf_mark = marks_map[name]
             
-            # Logic: New = Old + (PDF / 2)
+            # Logic: New = Old + PDF (No division by 2)
             old_val = float(student.get(target_subject, 0))
-            increment = pdf_mark / 2.0
-            new_val = old_val + increment
+            new_val = old_val + pdf_mark
             
             student[target_subject] = new_val
             updated_count += 1
@@ -157,11 +156,11 @@ def update_js_data(target_subject, marks_map):
     print("new_data.js updated successfully.")
 
 def main():
-    print("--- Marks Updater ---")
+    print("--- Marks Updater (No Division) ---")
     
     if len(sys.argv) < 3:
         # Default behavior or prompt? User passes args usually
-        print("Usage: python update_marks.py <pdf_file> <subject>")
+        print("Usage: python update_marks_no_divide.py <pdf_file> <subject>")
         return
 
     pdf_input = sys.argv[1]

@@ -1,6 +1,6 @@
 # How to Extract Marks from PDF
 
-This guide explains how to use the `update_marks.py` script to extract marks from a PDF file and update the `new_data.js` data file.
+This guide explains how to use the `update_marks_compiled.py` script to extract marks from a PDF file and update the `new_data.js` data file.
 
 ## Prerequisites
 
@@ -13,19 +13,19 @@ This guide explains how to use the `update_marks.py` script to extract marks fro
 ## Files
 
 -   `new_data.js`: The JavaScript file containing the student data (marks DB).
--   `update_marks.py`: The Python script that performs the extraction and update.
+-   `update_marks_compiled.py`: The Python script that performs the extraction and update.
 -   `Your_PDF_File.pdf`: The source PDF containing student results.
 
 ## How to Run
 
 1.  Open a terminal (Command Prompt or PowerShell) and navigate to this folder:
     ```bash
-    cd c:\Users\parul\Desktop\html\marksheet
+    cd c:\Users\parul\Desktop\html\marksheet2
     ```
 
 2.  Run the script with the PDF filename and the subject code:
     ```bash
-    python update_marks.py <PDF_FILENAME> <SUBJECT_CODE>
+    python update_marks_compiled.py <PDF_FILENAME> <SUBJECT_CODE>
     ```
 
 ### Subject Codes
@@ -34,13 +34,20 @@ This guide explains how to use the `update_marks.py` script to extract marks fro
 -   `fsd`: Full Stack Development
 -   `fcsp` or `python`: FCSP / Python
 -   `de`: Digital Electronics
+-   `etc`: Effective Technical Communication
 
 ### Example Command
 
 To extract marks for **FSD** from a file named `Marksheet_SY4.pdf`:
 
 ```bash
-python update_marks.py Marksheet_SY4.pdf fsd
+python update_marks_compiled.py Marksheet_SY4.pdf fsd
+```
+
+To extract marks for **ETC** from a file named `Result.pdf`:
+
+```bash
+python update_marks_compiled.py Result.pdf etc
 ```
 
 ## How It Works
