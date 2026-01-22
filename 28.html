@@ -705,7 +705,7 @@
         let gradeChart = null;
 
         const allData = data.map((s, i) => {
-            s.etc = 0;
+            s.etc = s.etc || 0;
             s.total = s.ps + s.fsd + s.fcsp + s.de + s.etc;
             return s;
         }).sort((a, b) => b.total - a.total).map((s, i) => ({ ...s, rank: i + 1 }));
