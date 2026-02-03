@@ -59,3 +59,33 @@ python update_marks_compiled.py Result.pdf etc
 5.  It saves the updated data back to `new_data.js`.
 
 > **Note:** The script assumes the PDF table format has the Enrollment Number in the 3rd column (index 2) and Marks in the 8th column (index 7).
+
+## Special Case: SY4 Compiled Marksheet (No Division)
+
+For the **SY4 Compiled Marksheet** (or any case where you explicitly do **NOT** want to divide the marks by 2), use the `update_marks_no_divide.py` script.
+
+### Steps
+
+1.  Open your terminal in the project folder:
+    ```bash
+    cd c:\Users\parul\Desktop\html\marksheet2
+    ```
+
+2.  Run the `update_marks_no_divide.py` script with the SY4 compiled PDF and the subject code (e.g., `etc`).
+
+    **Syntax:**
+    ```bash
+    python update_marks_no_divide.py <COMPILED_PDF_FILENAME> <SUBJECT_CODE>
+    ```
+
+    **Example for ETC:**
+    ```bash
+    python update_marks_no_divide.py "SY4_COMPILED T1 to T3_MARKSHEET_CST_CSIT_MACP_CSE-CS_ODD_2025.pdf" etc
+    ```
+
+### How `update_marks_no_divide.py` Works
+
+1.  Reads the PDF.
+2.  Matches students by **NAME** (Column 7 / Index 6) instead of Enrollment Number.
+3.  Extracted mark is added DIRECTLY to the existing mark (No division by 2).
+4.  Updates `new_data.js`.

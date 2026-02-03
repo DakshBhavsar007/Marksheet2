@@ -5,7 +5,7 @@ import argparse
 import sys
 import os
 
-# Updated to target the JS file
+# Target the JS file
 DATA_FILE_PATH = os.path.join(os.path.dirname(__file__), "new_data.js")
 
 SUBJECT_MAP = {
@@ -19,7 +19,7 @@ SUBJECT_MAP = {
 
 def extract_marks_from_pdf(pdf_path):
     marks_map = {}
-    print(f"Reading PDF: {pdf_path}")
+    print(f"Reading Subject Marksheet PDF: {pdf_path}")
     if not os.path.exists(pdf_path):
         print(f"Error: PDF file not found at {pdf_path}")
         return None
@@ -30,25 +30,14 @@ def extract_marks_from_pdf(pdf_path):
             tables = page.extract_tables()
             for table in tables:
                 for row in table:
-                    # Check for valid row length (at least 9 columns for this PDF)
-                    # We look for Name at index 6 and Marks at index 8
-                    name_idx = -1
-                    mark_idx = -1
+                    # Subject Marksheet Format: Usually 8 columns
+                    # Name is at index 3
+                    # Marks is at index 7
                     
-                    # Detect format based on column count
-                    if len(row) == 8:
-                        # Format like DE Marksheet: [Sr, Branch, Enroll, Name, Roll, Div, Mentor, Mark]
-                        name_idx = 3
-                        mark_idx = 7
-                    elif len(row) >= 9:
-                        # Format like Compiled Marksheet: [..., Name at 6, ..., Marks at 8, ...]
-                        name_idx = 6
-                        mark_idx = 8
-                    else:
-                        continue # Skip rows with too few columns
-
-                    name = str(row[name_idx]).strip().upper()
-                    mark_str = str(row[mark_idx]).strip()
+                    if not row or len(row) < 8: continue
+                    
+                    name = str(row[3]).strip().upper()
+                    mark_str = str(row[7]).strip()
                     
                     # Basic validation: Name should be reasonable length
                     if len(name) < 3 or name == "NAME" or name == "SUBJECT NAME": 
@@ -83,7 +72,6 @@ def update_js_data(target_subject, marks_map):
     with open(DATA_FILE_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Extract array content: const data = [ ... ];
     match = re.search(r'const data = (\[.*\]);', content, re.DOTALL)
     if not match:
         print("Error: Could not find 'const data' array in new_data.js.")
@@ -92,13 +80,7 @@ def update_js_data(target_subject, marks_map):
     data_str = match.group(1)
     
     # 1. Add quotes to keys {roll: -> {"roll":
-    # Be careful not to quote values that are already quoted
-    # Basic logic: look for word characters followed by colon, excluding those in quotes (simplified)
-    # Since existing lines are well formatted like: {roll: 115, div: "D4", ...}
-    # We can replace (\w+): with "\1":
-    
     json_str = data_str
-    # Replace keys like 'roll:' with '"roll":'
     json_str = re.sub(r'(\w+):', r'"\1":', json_str)
     
     # Trailing commas are invalid in JSON, remove them
@@ -109,18 +91,10 @@ def update_js_data(target_subject, marks_map):
         data = json.loads(json_str)
     except json.JSONDecodeError as e:
         print(f"JSON Parse Error during preparation: {e}")
-        # Fallback debug
-        # print(json_str[:500]) 
         return
 
     updated_count = 0
-    updated_count = 0
     
-    # Check for duplicate names in JS data to ensure safety
-    all_names = [s.get('name', '').strip().upper() for s in data if 'name' in s]
-    if len(all_names) != len(set(all_names)):
-        print("WARNING: Duplicate names found in new_data.js. Name matching might be ambiguous.")
-
     for student in data:
         # Match by Name
         name = str(student.get('name', '')).strip().upper()
@@ -141,18 +115,8 @@ def update_js_data(target_subject, marks_map):
     
     print(f"Updated records for {updated_count} students.")
 
-    # Reconstruct JS file
-    # We want format: {roll: 115, div: "D4", ...}, no quotes on keys to match style (optional but cleaner)
-    # Actually, standard JSON is fine, but let's try to match the "keys without quotes" style if possible
-    # or just write valid JS object literals. Valid JS allows string keys.
-    # Let's write standard JSON but strip quotes from keys for aesthetic match to original file if preferred,
-    # OR just write standard JS objects. 
-    # Let's keep it simple: Write valid JS objects (keys can have quotes).
-    
     new_data_lines = ["const data = ["]
     for i, item in enumerate(data):
-        # dumps produces {"key": val}
-        # We can strip quotes from keys to match original style: "key": -> key:
         line_json = json.dumps(item)
         # Remove quotes around keys
         line_js = re.sub(r'"(\w+)":', r'\1:', line_json)
@@ -169,11 +133,10 @@ def update_js_data(target_subject, marks_map):
     print("new_data.js updated successfully.")
 
 def main():
-    print("--- Marks Updater (No Division) ---")
+    print("--- Marks Updater (Subject Marksheet - No Division) ---")
     
     if len(sys.argv) < 3:
-        # Default behavior or prompt? User passes args usually
-        print("Usage: python update_marks_no_divide.py <pdf_file> <subject>")
+        print("Usage: python update_marks_subject_nodiv.py <pdf_file> <subject>")
         return
 
     pdf_input = sys.argv[1]
@@ -186,7 +149,6 @@ def main():
     internal_key = SUBJECT_MAP[subject_input]
     
     if not os.path.isabs(pdf_input):
-        # Assume relative to this script
         pdf_input = os.path.join(os.path.dirname(DATA_FILE_PATH), pdf_input)
     
     marks = extract_marks_from_pdf(pdf_input)
