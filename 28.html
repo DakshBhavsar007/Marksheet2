@@ -567,6 +567,7 @@
             }
         }
 
+
         /* Signature Styles for Daksh */
         .sig-wrapper {
             position: relative;
@@ -585,6 +586,7 @@
             margin-bottom: -5px;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
             margin-right: -20px;
+            /* Aligned per design */
             font-family: 'Outfit', sans-serif;
         }
 
@@ -628,7 +630,7 @@
         <header>
             <div class="brand">
                 <h1>LJ University</h1>
-                <p>Advanced Academic Performance Dashboard • SY4 Sem-III</p>
+                <p id="headerSubtitle">Advanced Academic Performance Dashboard • SY4 Sem-III</p>
             </div>
             <div class="actions">
                 <!-- Theme Toggle -->
@@ -686,8 +688,18 @@
         <div class="glass-panel controls-bar">
             <div class="view-tabs">
                 <div class="tab-indicator" id="tabIndicator"></div>
-                <button class="tab-btn active" onclick="setMode('new', this)">Rank View</button>
-                <button class="tab-btn" onclick="setMode('original', this)">Classic View</button>
+                <button class="tab-btn view-tab active" onclick="setMode('new', this)">Rank View</button>
+                <button class="tab-btn view-tab" onclick="setMode('original', this)">Classic View</button>
+            </div>
+
+            <div class="view-tabs" style="gap: 5px;">
+                <div class="tab-indicator" id="deptTabIndicator"></div>
+
+                <button class="tab-btn dept-tab active" onclick="setDept('Overall', this)">Overall</button>
+                <button class="tab-btn dept-tab" onclick="setDept('SY1', this)">SY1</button>
+                <button class="tab-btn dept-tab" onclick="setDept('SY2', this)">SY2</button>
+                <button class="tab-btn dept-tab" onclick="setDept('SY3', this)">SY3</button>
+                <button class="tab-btn dept-tab" onclick="setDept('SY4', this)">SY4</button>
             </div>
 
             <div class="filter-group">
@@ -712,6 +724,7 @@
                         <tr>
                             <th onclick="sortTable('rank')">Rank <i class="ri-arrow-up-down-line"></i></th>
                             <th onclick="sortTable('roll')">Roll No <i class="ri-arrow-up-down-line"></i></th>
+                            <th>DEPT</th>
                             <th onclick="sortTable('div')">Div <i class="ri-arrow-up-down-line"></i></th>
                             <th onclick="sortTable('branch')">Branch <i class="ri-arrow-up-down-line"></i></th>
                             <th onclick="sortTable('enrollment')">Enrollment</th>
@@ -732,7 +745,7 @@
     </div>
 
     <!-- Data -->
-    <script src="new_data.js"></script>
+    <script src="new_datamarksheet.js?v=3"></script>
     <script>
         // --- Theme Logic ---
         function toggleTheme() {
@@ -754,14 +767,45 @@
 
         // --- App Logic ---
         let currentMode = 'new';
+        let currentDept = 'Overall'; // Default to Overall
         let filteredData = [];
         let gradeChart = null;
 
-        const allData = data.map((s, i) => {
+        // 1. Calculate Global Ranks first
+        const rawData = data.map(s => {
+            // Include ETC in total calculation (use 0 if not available)
             s.etc = s.etc || 0;
             s.total = s.ps + s.fsd + s.fcsp + s.de + s.etc;
+            if (!s.dept) s.dept = 'SY4';
             return s;
-        }).sort((a, b) => b.total - a.total).map((s, i) => ({ ...s, rank: i + 1 }));
+        }).sort((a, b) => b.total - a.total);
+
+        // Assign Global Rank
+        rawData.forEach((s, i) => {
+            s.globalRank = i + 1;
+        });
+
+        // 2. Assign Department Ranks
+        let allData = [];
+        const depts = [...new Set(rawData.map(s => s.dept))];
+
+        // We can just iterate rawData since it's already sorted by total.
+        // But to be safe and clear, let's group.
+
+        let deptCounters = {};
+        depts.forEach(d => deptCounters[d] = 1);
+
+        allData = rawData.map(s => {
+            // s is already sorted by total descending globally.
+            // But for dept rank, we need to know its position relative to same dept.
+            // Simple way: filter and sort again? Or just use counters since rawData is sorted?
+            // rawData is sorted by Total. So if we iterate through rawData, 
+            // the first SY4 we see is Rank 1, next is Rank 2 etc.
+
+            s.deptRank = deptCounters[s.dept]++;
+            s.rank = s.deptRank; // Default 'rank' property maps to Dept Rank usually, but we swap based on view.
+            return s;
+        });
 
         function setAnimation(el) {
             const indicator = document.getElementById('tabIndicator');
@@ -769,7 +813,17 @@
             const parentRect = el.parentElement.getBoundingClientRect();
             indicator.style.width = `${rect.width}px`;
             indicator.style.left = `${rect.left - parentRect.left}px`;
-            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function setDeptAnimation(el) {
+            const indicator = document.getElementById('deptTabIndicator');
+            const rect = el.getBoundingClientRect();
+            const parentRect = el.parentElement.getBoundingClientRect();
+            indicator.style.width = `${rect.width}px`;
+            indicator.style.left = `${rect.left - parentRect.left}px`;
+            document.querySelectorAll('.dept-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
         }
 
@@ -779,40 +833,74 @@
             filterData();
         }
 
-        window.onload = () => {
-            setAnimation(document.querySelector('.tab-btn'));
+        function setDept(dept, el) {
+            currentDept = dept;
+            setDeptAnimation(el);
+            updateDivisions(dept);
+            updateBranches(dept);
 
-            const branches = [...new Set(allData.map(s => s.branch))].sort();
-            const divisions = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9'];
-
-            const bSelect = document.getElementById('branchFilter');
-            branches.forEach(b => bSelect.add(new Option(b, b)));
-
-            const dSelect = document.getElementById('divFilter');
-            divisions.forEach(d => dSelect.add(new Option(d, d)));
+            // Update Header Text
+            const subtitle = document.getElementById('headerSubtitle');
+            if (subtitle) subtitle.innerText = `Advanced Academic Performance Dashboard • ${dept} Sem-III`;
 
             filterData();
+        }
+
+        window.onload = () => {
+            // Initialize View Tabs
+            const defaultViewTab = document.querySelector('.view-tab.active');
+            if (defaultViewTab) setAnimation(defaultViewTab);
+
+            // Initialize Dept Tabs
+            const defaultDeptTab = document.querySelector('.dept-tab[onclick*="SY4"]');
+            if (defaultDeptTab) {
+                setDept('SY4', defaultDeptTab);
+            }
+
+            // Divisions and Branches init done in setDept
         };
 
         function getStudentModeData(student) {
-            let roll, div;
-            if (currentMode === 'new') {
-                roll = student.rank;
-                const r = student.rank;
-                if (r <= 35) div = 'D1';
-                else if (r <= 70) div = 'D2';
-                else if (r <= 102) div = 'D3';
-                else if (r <= 134) div = 'D4';
-                else if (r <= 166) div = 'D5';
-                else if (r <= 198) div = 'D6';
-                else if (r <= 226) div = 'D7';
-                else if (r <= 257) div = 'D8';
-                else div = 'D9';
-            } else {
-                roll = student.roll;
-                div = student.div;
+            // User Request: "roll no should displaying the classic view one and divisions also displaying the classic view one"
+            // This means we ALWAYS return real roll and real div.
+            return {
+                roll: student.roll,
+                div: student.div
+            };
+        }
+
+        function updateBranches(dept) {
+            const bSelect = document.getElementById('branchFilter');
+            bSelect.innerHTML = '<option value="">All Branches</option>';
+
+            let deptData = allData;
+            // Filter distinct branches relevant to this Dept if NOT Overall
+            if (dept !== 'Overall') {
+                deptData = allData.filter(s => s.dept === dept);
             }
-            return { roll, div };
+
+            const branches = [...new Set(deptData.map(s => s.branch))].filter(b => b).sort();
+
+            branches.forEach(b => bSelect.add(new Option(b, b)));
+        }
+
+        function updateDivisions(dept) {
+            const dSelect = document.getElementById('divFilter');
+            dSelect.innerHTML = '<option value="">All Divisions</option>';
+
+            let divisions = [];
+            if (dept === 'SY4') {
+                divisions = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9'];
+            } else if (dept === 'SY2') {
+                divisions = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'];
+            } else if (dept === 'SY1') {
+                divisions = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9'];
+            } else if (dept === 'SY3') {
+                divisions = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9'];
+            }
+            // Add other depts if needed later
+
+            divisions.forEach(d => dSelect.add(new Option(d, d)));
         }
 
         function filterData() {
@@ -820,22 +908,47 @@
             const branch = document.getElementById('branchFilter').value;
             const divSelect = document.getElementById('divFilter').value;
 
-            filteredData = allData.filter(s => {
-                const modeData = getStudentModeData(s);
-                const isNum = /^\d+$/.test(search);
-                let matchesSearch = false;
+            // First filter by Dept (unless Overall)
+            let deptData = allData;
+            if (currentDept !== 'Overall') {
+                deptData = allData.filter(s => s.dept === currentDept);
+            }
 
-                if (!search) matchesSearch = true;
-                else if (isNum && search.length < 5) matchesSearch = (modeData.roll == search);
-                else matchesSearch = s.name.toLowerCase().includes(search) || s.enrollment.includes(search);
+            if (deptData.length === 0) {
+                filteredData = [];
+            } else {
+                // Sort by total to establish Dept specific Rank if needed?
+                // The main table shows global rank or dept rank?
+                // Usually dashboard shows relative rank.
+                // Let's re-calculate rank strictly for the current view for "Rank" column?
+                // Or keep global. Global is cooler. Let's keep global rank in `s.rank` but maybe
+                // we sort `filteredData` by score.
 
-                const matchesBranch = !branch || s.branch === branch;
-                const matchesDiv = !divSelect || modeData.div === divSelect;
+                filteredData = deptData.filter(s => {
+                    const modeData = getStudentModeData(s);
+                    const isNum = /^\d+$/.test(search);
+                    let matchesSearch = false;
 
-                return matchesSearch && matchesBranch && matchesDiv;
-            });
+                    if (!search) matchesSearch = true;
+                    // Check both roll and rank for search?
+                    else if (isNum && search.length < 5) matchesSearch = (modeData.roll == search || s.roll == search);
+                    else matchesSearch = s.name.toLowerCase().includes(search) || s.enrollment.includes(search);
 
-            if (currentMode === 'new') filteredData.sort((a, b) => a.rank - b.rank);
+                    const matchesBranch = !branch || s.branch === branch;
+                    const matchesDiv = !divSelect || s.div === divSelect; // Use actual div for filtering
+
+                    return matchesSearch && matchesBranch && matchesDiv;
+                });
+            }
+
+            if (currentMode === 'new') {
+                // Sort based on view: Overall -> Global Rank, Dept -> Dept Rank
+                if (currentDept === 'Overall') {
+                    filteredData.sort((a, b) => a.globalRank - b.globalRank);
+                } else {
+                    filteredData.sort((a, b) => a.deptRank - b.deptRank);
+                }
+            }
             else filteredData.sort((a, b) => a.roll - b.roll);
 
             renderTable();
@@ -848,7 +961,7 @@
             tbody.innerHTML = '';
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:40px; color:var(--text-muted)">No records found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:40px; color:var(--text-muted)">No records found</td></tr>`;
                 return;
             }
 
@@ -858,12 +971,23 @@
                 tr.className = 'fade-in';
                 tr.style.animationDelay = `${idx * 0.01}s`;
 
-                if (s.rank <= 3) tr.classList.add('top-rank');
-                if ([37, 52, 62, 131, 97].includes(s.roll)) tr.classList.add('highlight-row');
+                // Determine Rank to Display
+                // Overall -> Global Rank
+                // Specific Dept -> Dept Rank
+                const displayedRank = (currentDept === 'Overall') ? s.globalRank : s.deptRank;
+
+                if (displayedRank <= 3 && currentMode === 'new') tr.classList.add('top-rank');
+
+                // Only highlighted rows for SY4 specific rolls (red highlight request)
+                if (s.dept === 'SY4') {
+                    if ([37, 52, 62, 131, 97].includes(s.roll)) tr.classList.add('highlight-row');
+                }
+
 
                 tr.innerHTML = `
-                    <td class="cell-rank">#${s.rank}</td>
+                    <td class="cell-rank">#${displayedRank}</td>
                     <td style="font-weight:600">${roll}</td>
+                    <td>${s.dept || 'SY4'}</td>
                     <td><span style="background:var(--bg-glass-hover); padding:2px 8px; border-radius:4px; font-size:0.85rem">${div}</span></td>
                     <td>${s.branch}</td>
                     <td style="font-family:monospace; color:var(--text-muted)">${s.enrollment}</td>
@@ -880,15 +1004,20 @@
                     <td>${s.fsd}</td>
                     <td>${s.fcsp}</td>
                     <td>${s.de}</td>
-                    <td>${s.etc}</td>
-                    <td><span class="cell-total">${s.total}</span></td>
+                    <td>${s.etc || 0}</td>
+                    <td><span class="cell-total">${s.total.toFixed(2)}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
         function updateStats() {
-            if (filteredData.length === 0) return;
+            if (filteredData.length === 0) {
+                document.getElementById('stat-count').innerText = "--";
+                document.getElementById('stat-avg').innerText = "--";
+                document.getElementById('stat-topper').innerText = "--";
+                return;
+            }
             const total = filteredData.reduce((acc, curr) => acc + curr.total, 0);
             const avg = (total / filteredData.length).toFixed(1);
             const topper = filteredData.reduce((prev, current) => (prev.total > current.total) ? prev : current);
@@ -907,7 +1036,7 @@
 
             const subjects = ['PS', 'FSD', 'FCSP', 'DE', 'ETC'];
             const avgs = subjects.map(sub => {
-                const sum = filteredData.reduce((acc, s) => acc + s[sub.toLowerCase()], 0);
+                const sum = filteredData.reduce((acc, s) => acc + (s[sub.toLowerCase()] || 0), 0);
                 return (sum / filteredData.length).toFixed(1);
             });
 
@@ -918,7 +1047,7 @@
                     datasets: [{
                         label: 'Avg Score',
                         data: avgs,
-                        backgroundColor: ['rgba(108, 92, 231, 0.7)', 'rgba(0, 206, 201, 0.7)', 'rgba(232, 67, 147, 0.7)', 'rgba(253, 203, 110, 0.7)', 'rgba(100, 100, 100, 0.7)'],
+                        backgroundColor: ['rgba(108, 92, 231, 0.7)', 'rgba(0, 206, 201, 0.7)', 'rgba(232, 67, 147, 0.7)', 'rgba(253, 203, 110, 0.7)', 'rgba(46, 213, 115, 0.7)'],
                         borderRadius: 8,
                         barThickness: 40
                     }]
@@ -960,10 +1089,10 @@
         }
 
         function exportCSV() {
-            let csv = 'Rank,Roll No,Division,Branch,Enrollment,Name,Mentor,PS,FSD,FCSP,DE,ETC,Total\n';
+            let csv = 'Rank,Roll No,DEPT,Division,Branch,Enrollment,Name,Mentor,PS,FSD,FCSP,DE,Total\n';
             filteredData.forEach(s => {
                 const { roll, div } = getStudentModeData(s);
-                csv += `${s.rank},${roll},${div},${s.branch},${s.enrollment},"${s.name}",${s.mentor},${s.ps},${s.fsd},${s.fcsp},${s.de},${s.etc},${s.total}\n`;
+                csv += `${s.rank},${roll},${s.dept || 'SY4'},${div},${s.branch},${s.enrollment},"${s.name}",${s.mentor},${s.ps},${s.fsd},${s.fcsp},${s.de},${s.total}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const Link = document.createElement('a');
