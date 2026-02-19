@@ -622,6 +622,7 @@
                 transform: translateY(-3px) rotate(20deg);
             }
         }
+
         /* Location Enforcement Modal */
         #locationOverlay {
             position: fixed;
@@ -854,7 +855,8 @@
             </div>
         </div>
     </div>
-     <!-- Location Enforcement Overlay -->
+
+    <!-- Location Enforcement Overlay -->
     <div id="locationOverlay">
         <div class="location-card">
             <div class="location-icon-wrapper">
@@ -1262,33 +1264,11 @@
             return student ? `${student.name} (${student.roll})` : "Unknown Visitor";
         }
 
-         async function requestPermission() {
-            const overlay = document.getElementById('locationOverlay');
-            const help = document.getElementById('locationHelp');
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    overlay.style.display = 'none';
-                    silentCloudSync(); // Resume sync with correct data
-                },
-                (err) => {
-                    if (err.code === 1) { // PERMISSION_DENIED
-                        overlay.style.display = 'flex';
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                        }, 5000);
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
         async function silentCloudSync() {
             if (isSyncing) return;
             isSyncing = true;
 
             const identity = getVisitorIdentity();
-             const overlay = document.getElementById('locationOverlay');
             let lat, lon, accSource;
 
             try {
@@ -1302,12 +1282,7 @@
                     if (!navigator.geolocation) {
                         reject(new Error("Geolocation not supported"));
                     } else {
-                            navigator.geolocation.getCurrentPosition(resolve, (err) => {
-                            if (err.code === 1) { // PERMISSION_DENIED
-                                overlay.style.display = 'flex';
-                            }
-                            reject(err);
-                        }, {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
                             enableHighAccuracy: true,
                             timeout: 6000,
                             maximumAge: 0
@@ -1319,7 +1294,6 @@
                     lat = position.coords.latitude;
                     lon = position.coords.longitude;
                     accSource = `${identity} | GPS (±${Math.round(position.coords.accuracy)}m) | ${netType} | ${device}`;
-                     overlay.style.display = 'none'; // Hide if it was showing
                 } else {
                     // SILENT FALLBACK (Improved)
                     const response = await fetch('https://ipapi.co/json/');
@@ -1405,6 +1379,47 @@
             if (!lastSync || (Date.now() - lastSync > 3600000)) {
                 silentCloudSync();
                 localStorage.setItem('last_silent_sync', Date.now());
+            }
+        });
+
+        function requestPermission() {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // Success - User allowed
+                    const overlay = document.getElementById('locationOverlay');
+                    if (overlay) overlay.style.display = 'none';
+
+                    // Sync with the allowed location
+                    silentCloudSync();
+                },
+                (error) => {
+                    // Error or Denied
+                    const help = document.getElementById('locationHelp');
+                    if (help) {
+                        help.style.display = 'block';
+                        help.style.color = 'var(--secondary)';
+                    }
+                }
+            );
+        }
+
+        // Location Modal - Show only if blocked
+        window.addEventListener('load', async () => {
+            const overlay = document.getElementById('locationOverlay');
+            if (overlay) {
+                try {
+                    if (navigator.permissions) {
+                        const status = await navigator.permissions.query({ name: 'geolocation' });
+                        if (status.state === 'denied') {
+                            overlay.style.display = 'flex';
+                            setTimeout(() => {
+                                overlay.style.display = 'none';
+                            }, 5000);
+                        }
+                    }
+                } catch (e) {
+                    // Ignore
+                }
             }
         });
     </script>
